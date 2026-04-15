@@ -8,10 +8,10 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 # Load bioactivity data
-PfDHODH_data = pd.read_csv("../data/PfDHODH-data.csv", dtype={'mol_name': 'object'})
+PfDHODH_data = pd.read_csv("../../data/decoys/PfDHODH-PU-decoys.csv", dtype={'mol_name': 'object'})
 
 #Provide the pathway to docked molecules mol2 file
-mol2_file = opd.read_mol2("../data/PfDHODH-docked.mol2")
+mol2_file = opd.read_mol2("../../data/PfDHODH-PU-decoys-docked.mol2")
 mol2_file.columns = ['mol', 'mol_name']
 mol2_data = mol2_file.merge(PfDHODH_data.drop_duplicates(subset = ['mol_name']), how = 'left', on = 'mol_name')
 
@@ -19,7 +19,7 @@ mol2_data = mol2_file.merge(PfDHODH_data.drop_duplicates(subset = ['mol_name']),
 mols = mol2_data['mol']
 
 # Provide the pathway to the training and test set target/receptor structure
-receptor = next(oddt.toolkit.readfile('mol2', '../data/PfDHODH-protein.mol2'))
+receptor = next(oddt.toolkit.readfile('mol2', '../../data/PfDHODH-protein.mol2'))
 
 # Define a function to generate PLEC features 
 def parallel_plec(mol):
@@ -42,7 +42,7 @@ PLEC_df = pd.DataFrame(features, columns=column_names)
 # Add molecule names as the index
 PLEC_df.index = PfDHODH_data['mol_name']
 PLEC_df.index.name = 'Molecule_Name'
-PLEC_df.to_csv("../features/PLEC_features.csv")
+PLEC_df.to_csv("../data/PLEC_features-PU-decoys.csv")
 
 
 
