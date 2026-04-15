@@ -1,4 +1,5 @@
 # Import statements
+import argparse
 import numpy as np
 import pandas as pd
 import oddt
@@ -7,42 +8,58 @@ from oddt.fingerprints import PLEC
 from joblib import Parallel, delayed
 from tqdm import tqdm
 
-# Load bioactivity data
-PfDHODH_data = pd.read_csv("../../data/decoys/PfDHODH-PU-decoys.csv", dtype={'mol_name': 'object'})
+PLEC_SIZE = 4092
 
-#Provide the pathway to docked molecules mol2 file
-mol2_file = opd.read_mol2("../../data/PfDHODH-PU-decoys-docked.mol2")
-mol2_file.columns = ['mol', 'mol_name']
-mol2_data = mol2_file.merge(PfDHODH_data.drop_duplicates(subset = ['mol_name']), how = 'left', on = 'mol_name')
+# Module-level receptor — set in main() before parallel call so workers
+# inherit it via fork without pickling (same pattern as original script)
+receptor = None
 
-#Extract the structures of all molecules
-mols = mol2_data['mol']
+def make_plec(mol):
+    return PLEC(mol, protein=receptor, size=PLEC_SIZE,
+                depth_protein=5, depth_ligand=1,
+                distance_cutoff=4.5, sparse=False)
 
-# Provide the pathway to the training and test set target/receptor structure
-receptor = next(oddt.toolkit.readfile('mol2', '../../data/PfDHODH-protein.mol2'))
+def parse_args():
+    parser = argparse.ArgumentParser(description="Generate PLEC fingerprint features from docked molecules.")
+    parser.add_argument("csv_file", help="Path to the bioactivity data CSV file (must have a 'mol_name' column)")
+    parser.add_argument("ligands_mol2", help="Path to the docked ligands .mol2 file")
+    parser.add_argument("receptor_mol2", help="Path to the receptor .mol2 file")
+    parser.add_argument("output_csv", help="Path for the output PLEC features CSV file")
+    parser.add_argument("--num_cores", type=int, default=-1, help="Number of cores for parallel processing (default: all available)")
+    return parser.parse_args()
 
-# Define a function to generate PLEC features 
-def parallel_plec(mol):
-    feature = PLEC(mol, protein = receptor, size = 4092, 
-                  depth_protein = 5, depth_ligand = 1,
-                  distance_cutoff = 4.5, sparse = False)
-    return feature
+def main():
+    global receptor
+    args = parse_args()
 
-# Generate PLEC features using 20 cores
-num_cores = 20
-features = Parallel(n_jobs = num_cores, backend = "multiprocessing")(delayed(parallel_plec)(mol) for mol in tqdm(mols))
+    # Load bioactivity data
+    bioactivity_data = pd.read_csv(args.csv_file, dtype={'mol_name': 'object'})
+    if 'mol_name' not in bioactivity_data.columns:
+        raise ValueError(f"CSV file must contain a 'mol_name' column. Found: {list(bioactivity_data.columns)}")
+    n_dupes = bioactivity_data.duplicated(subset=['mol_name']).sum()
+    if n_dupes:
+        print(f"Warning: {n_dupes} duplicate mol_name entries in CSV; keeping first occurrence.")
+    bioactivity_data = bioactivity_data.drop_duplicates(subset=['mol_name'])
 
-# Save PLEC features to a .csv file
-# Create column names
-column_names = [f"PLEC_{i}" for i in range(4092)]
+    # Load and merge docked ligands with bioactivity data
+    mol2_file = opd.read_mol2(args.ligands_mol2)
+    mol2_file.columns = ['mol', 'mol_name']
+    mol2_data = mol2_file.merge(bioactivity_data, how='left', on='mol_name')
 
-# Convert the list of arrays to a DataFrame
-PLEC_df = pd.DataFrame(features, columns=column_names)
+    # Load receptor into module-level global so workers inherit it via fork
+    receptor = next(oddt.toolkit.readfile('mol2', args.receptor_mol2))
 
-# Add molecule names as the index
-PLEC_df.index = PfDHODH_data['mol_name']
-PLEC_df.index.name = 'Molecule_Name'
-PLEC_df.to_csv("../data/PLEC_features-PU-decoys.csv")
+    # Generate PLEC features in parallel
+    features = Parallel(n_jobs=args.num_cores, backend="multiprocessing")(
+        delayed(make_plec)(mol) for mol in tqdm(mol2_data['mol'])
+    )
 
+    # Save PLEC features to CSV
+    column_names = [f"PLEC_{i}" for i in range(PLEC_SIZE)]
+    PLEC_df = pd.DataFrame(features, columns=column_names)
+    PLEC_df.index = mol2_data['mol_name'].values
+    PLEC_df.index.name = 'Molecule_Name'
+    PLEC_df.to_csv(args.output_csv)
 
-
+if __name__ == "__main__":
+    main()
