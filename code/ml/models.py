@@ -2,7 +2,7 @@ from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from xgboost.sklearn import XGBRegressor
 
-SUPPORTED_MODELS = ("RF", "XGB", "SVR")
+SUPPORTED_MODELS = ("RF", "XGB", "SVM")
 
 
 def get_search_space(model_name, trial):
@@ -31,7 +31,7 @@ def get_search_space(model_name, trial):
             "n_estimators": trial.suggest_int("n_estimators", 100, 1000),
             "max_depth": trial.suggest_categorical("max_depth", [5, 6, 7, 8, 9, 10]),
         }
-    elif model_name == "SVR":
+    elif model_name == "SVM":
         return {
             "C": trial.suggest_int("C", 1, 10),
             "kernel": trial.suggest_categorical("kernel", ["rbf", "poly", "sigmoid"]),
@@ -47,13 +47,13 @@ def build_model(model_name, params, random_state=42, n_jobs=40):
     Parameters
     ----------
     model_name : str
-        One of 'RF', 'XGB', 'SVR'.
+        One of 'RF', 'XGB', 'SVM'.
     params : dict
         Hyperparameters (e.g. from Optuna best_params).
     random_state : int
-        Random seed (ignored for SVR).
+        Random seed (ignored for SVM).
     n_jobs : int
-        Parallelism (ignored for SVR).
+        Parallelism (ignored for SVM).
 
     Returns
     -------
@@ -75,7 +75,7 @@ def build_model(model_name, params, random_state=42, n_jobs=40):
             n_jobs=n_jobs,
             random_state=random_state,
         )
-    elif model_name == "SVR":
+    elif model_name == "SVM":
         return SVR(C=params["C"], kernel=params["kernel"])
     else:
         raise ValueError(f"model_name must be one of {SUPPORTED_MODELS}, got '{model_name}'")
