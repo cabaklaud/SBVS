@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-def get_train_test_split(df, heldout_cluster):
+def get_train_test_split(df, heldout_cluster, pu_decoys=True):
     """
     Split bioactivity data into train and two test sets based on cluster ID.
 
@@ -12,6 +12,9 @@ def get_train_test_split(df, heldout_cluster):
         Full dataset with columns: activity, Cluster_ID, mol_name, potency, SMILES.
     heldout_cluster : int
         Cluster ID (0-3) whose actives form the test set.
+    pu_decoys : bool
+        If False, property-unmatched decoys (mol_name starting with 'PU_DECOY')
+        are excluded from all splits.
 
     Returns
     -------
@@ -21,6 +24,9 @@ def get_train_test_split(df, heldout_cluster):
     test_act_decoys_df : pd.DataFrame
         Test actives + only the decoys paired to the heldout cluster.
     """
+    if not pu_decoys:
+        df = df[~df["mol_name"].str.startswith("PU_DECOY")]
+
     train_actives = df[(df["activity"] == "Active") & (df["Cluster_ID"] != heldout_cluster)]
     test_actives  = df[(df["activity"] == "Active") & (df["Cluster_ID"] == heldout_cluster)]
 
