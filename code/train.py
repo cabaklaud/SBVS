@@ -7,9 +7,9 @@ python train.py \
     --model RF \
     --features PLEC+Morgan \
     --heldout_cluster 3 \
-    --data ../../data/PfDHODH-data.csv \
-    --plec_features ../../data/features/PLEC_features.csv \
-    --output_dir ./screening-results
+    --data ../data/PfDHODH-data.csv \
+    --plec_features ../data/features/PLEC_features.csv \
+    --output_dir ../results
 """
 import argparse
 
@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument("--heldout_cluster", required=True, type=int, choices=[0, 1, 2, 3], help="Cluster ID to hold out as test actives")
     parser.add_argument("--data",            required=True, help="Path to bioactivity CSV (PfDHODH-data.csv)")
     parser.add_argument("--plec_features",   default=None,  help="Path to PLEC features CSV (required for PLEC or PLEC+Morgan)")
-    parser.add_argument("--pu_decoys",       action=argparse.BooleanOptionalAction, default=True, help="Include property-unmatched decoys (default: True)")
+    parser.add_argument("--no_pu_decoys",    action="store_true", help="Exclude property-unmatched decoys (default: include them)")
     parser.add_argument("--output_dir",      default="./screening-results", help="Root directory for output CSVs")
     parser.add_argument("--n_trials",        type=int, default=10,  help="Number of Optuna trials (default: 10)")
     parser.add_argument("--n_jobs",          type=int, default=40,  help="CPU cores for model training (default: 40)")
@@ -41,7 +41,8 @@ def main():
 
     print(f"Loading data from {args.data}")
     df = pd.read_csv(args.data)
-    train_df, full_test_df, test_act_decoys_df = get_train_test_split(df, args.heldout_cluster, pu_decoys=args.pu_decoys)
+    pu_decoys = not args.no_pu_decoys
+    train_df, full_test_df, test_act_decoys_df = get_train_test_split(df, args.heldout_cluster, pu_decoys=pu_decoys)
     print(f"  Train: {len(train_df)} | Full test: {len(full_test_df)} | Smaller test: {len(test_act_decoys_df)}")
 
     print(f"Building {args.features} features...")
@@ -69,10 +70,12 @@ def main():
         heldout_cluster=args.heldout_cluster,
         feature_type=args.features,
         output_dir=args.output_dir,
+        pu_decoys=pu_decoys,
         n_jobs=args.n_jobs,
     )
 
-    print(f"Done. Results saved to {args.output_dir}/heldout_cluster_{args.heldout_cluster}/{args.features}/")
+    decoy_tag = "pu_decoys" if pu_decoys else "no_pu_decoys"
+    print(f"Done. Results saved to {args.output_dir}/{decoy_tag}/heldout_cluster_{args.heldout_cluster}/{args.features}/")
 
 
 if __name__ == "__main__":

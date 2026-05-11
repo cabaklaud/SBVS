@@ -17,6 +17,7 @@ def train_and_evaluate(
     heldout_cluster,
     feature_type,
     output_dir,
+    pu_decoys=True,
     n_jobs=40,
 ):
     """
@@ -39,9 +40,11 @@ def train_and_evaluate(
         e.g. 'PLEC', 'Morgan', 'PLEC+Morgan' — used to build the output path.
     output_dir : str
         Root directory for screening results.
+    pu_decoys : bool
     n_jobs : int
     """
-    base = os.path.join(output_dir, f"heldout_cluster_{heldout_cluster}", feature_type)
+    decoy_tag = "pu_decoys" if pu_decoys else "no_pu_decoys"
+    base = os.path.join(output_dir, decoy_tag, f"heldout_cluster_{heldout_cluster}", feature_type)
     full_test_dir  = os.path.join(base, "full_test_set")
     act_decoys_dir = os.path.join(base, "smaller_test_set")
     os.makedirs(full_test_dir,  exist_ok=True)
