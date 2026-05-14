@@ -29,8 +29,9 @@ def parse_args():
     parser.add_argument("--heldout_cluster", required=True, type=int, choices=[0, 1, 2, 3], help="Cluster ID to hold out as test actives")
     parser.add_argument("--data",            required=True, help="Path to bioactivity CSV (PfDHODH-data.csv)")
     parser.add_argument("--plec_features",   default=None,  help="Path to PLEC features CSV (required for PLEC or PLEC+Morgan)")
+    parser.add_argument("--ecif_features",   default=None,  help="Path to ECIF features CSV (required for weighted_ECIF or multishelled_ECIF)")
     parser.add_argument("--no_pu_decoys",    action="store_true", help="Exclude property-unmatched decoys (default: include them)")
-    parser.add_argument("--output_dir",      default="./screening-results", help="Root directory for output CSVs")
+    parser.add_argument("--output_dir",      default="../results", help="Root directory for output CSVs")
     parser.add_argument("--n_trials",        type=int, default=10,  help="Number of Optuna trials (default: 10)")
     parser.add_argument("--n_jobs",          type=int, default=40,  help="CPU cores for model training (default: 40)")
     return parser.parse_args()
@@ -49,6 +50,7 @@ def main():
     features = get_features(
         args.features, train_df, full_test_df, test_act_decoys_df,
         plec_csv=args.plec_features,
+        ecif_csv=args.ecif_features,
     )
     labels = extract_labels(train_df, full_test_df, test_act_decoys_df)
 
