@@ -1,6 +1,6 @@
-# SBVS-PfDHODH
+# SBVS
 
-Structure-based virtual screening pipeline for *Plasmodium falciparum* DHODH (PfDHODH), a validated antimalarial drug target. Docked protein-ligand complexes are converted into ML-ready features, then regression models are trained to rank compounds by predicted potency and evaluated for virtual screening performance (enrichment of true actives near the top of the ranked list).
+Structure-based virtual screening pipeline for *Plasmodium falciparum* DHODH (PfDHODH), a validated antimalarial drug target - which can be adapted to any other protein target for development of target-specific machine-learning scoring functions. Docked protein-ligand complexes are converted into ML-ready features, then regression models are trained to rank compounds by predicted potency and evaluated for virtual screening performance (enrichment of true actives near the top of the ranked list).
 
 ## Pipeline
 
